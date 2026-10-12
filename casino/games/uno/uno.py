@@ -6,6 +6,7 @@ from .player import Player
 from casino.types import GameContext
 from casino.utils import clear_screen, cprint, cinput, display_topbar
 from casino.cards import UnoDeck, UnoCard
+from casino.games.uno.uno_postgame_stats import show_uno_stats
 
 UNO_HEADER = """
 ┌───────────────────────────────┐
@@ -87,7 +88,10 @@ def play_uno(ctx: GameContext) -> None:
     for i in range(7) :
         for j in players :
             j.draw(current_deck)
-    
+
+    for player in players:
+        player.cards_drawn = 0
+
     #draws until first card on discard pile is regular number/color, not black, or card with special rules 
     discard.append(draw(current_deck,discard))
     while not discard[-1].rank.isdigit():
@@ -98,6 +102,7 @@ def play_uno(ctx: GameContext) -> None:
     direction = 1
     while(continueGame) :
         i = players[currentPlayerIndex]
+        i.turns_taken += 1
         current_card = discard[-1]
         player_switch_warning(ctx, i)
         cprint("Player: " + i.name + "\n\nTop card of the Discard pile: \n" + str(current_card) + "\nYour hand:")
@@ -121,6 +126,7 @@ def play_uno(ctx: GameContext) -> None:
             VALID_RANKS  = [str(n) for n in range(0, 10)] + ["draw_2", "skip", "reverse"]
 
             valid_card = False
+            drew_card = False
             while (not valid_card): #checking if Card is in hand and can be played
                 valid_card = True
 
@@ -155,14 +161,26 @@ def play_uno(ctx: GameContext) -> None:
                     answer = cinput(INVALID_CARD_MSG).lower()
                     if (answer == "draw" or answer == "d"):
                         new_card = i.draw(current_deck)
+                        drew_card = True
                         cprint("You drew \n" + str(new_card) + " from the pile.")
                         break
+            if drew_card:
+                cinput("Please enter when ready to switch to next player")
+                display_uno_topbar(ctx)
+                currentPlayerIndex = (currentPlayerIndex + direction) % len(players)
+                continue
 
             i.hand.remove(new_card)
+            i.cards_played += 1
+
+            if new_card.rank in ("skip", "reverse", "draw_2", "wild", "wild_draw_4"):
+                i.special_cards_played += 1
+
             if len(i.hand) == 0:
                 continueGame = False
                 display_uno_topbar(ctx)
                 cprint(f"{i.name} is the winner!")
+                show_uno_stats(players, i)
                 cinput("Press enter when ready to exit")
                 break
             match new_card.rank:

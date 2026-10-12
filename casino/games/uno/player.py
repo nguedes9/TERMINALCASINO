@@ -7,11 +7,19 @@ class Player:
         self.id = id
         self.name = name.upper()
         self.hand = []
+        self.cards_drawn = 0
+        self.cards_played = 0
+        self.turns_taken = 0
+        self.special_cards_played = 0
+        self.largest_hand_size = 0
     
     def draw(self, deck: list[UnoCard]) -> UnoCard:
         c = random.choice(deck)
         self.hand.append(c)
         deck.remove(c)
+        self.cards_drawn += 1
+        if len(self.hand) > self.largest_hand_size:
+            self.largest_hand_size = len(self.hand)
         return c
     
     def play_card(self) -> UnoCard:
